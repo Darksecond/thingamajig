@@ -1,3 +1,6 @@
+use termion::{raw::IntoRawMode, input::{TermRead, Keys}, event::Key};
+use std::io::{Write, stdout, stdin, Stdin};
+
 const OP_HALT: u8 = 0x0;
 const OP_RET : u8 = 0x1;
 const OP_SHL : u8 = 0x2;
@@ -62,15 +65,52 @@ struct Core {
     memory: [u8; Self::MEM_SIZE],
     regs: Registers,
     is_halted: bool,
+    keys: Keys<Stdin>,
 }
 
 impl Core {
     const MEM_SIZE: usize = 0x10000;
-    pub fn new() -> Self {
+    const DEV_CHAR: u16 = 0xFFFF;
+
+    pub fn new(keys: Keys<Stdin>) -> Self {
         Self {
             memory: [0; Self::MEM_SIZE],
             regs: Registers::new(),
             is_halted: false,
+            keys,
+        }
+    }
+
+    fn read_key(&mut self) -> char {
+        let key = self.keys.next().unwrap_or(Ok(Key::Null)).unwrap();
+        let key = match key {
+            Key::Char(c) => c,
+            Key::Backspace => '\x08',
+            Key::Esc => '\x1B',
+            _ => '\x00',
+        };
+        print!("{}", key);
+        stdout().flush().unwrap();
+        key
+    }
+
+    fn mem_write(&mut self, addr: u16, value: u8) {
+        match addr {
+            Self::DEV_CHAR => {
+                print!("{}", char::from_u32(value as _).expect("Not a valid character"));
+                stdout().flush().unwrap();
+            },
+            _ => self.memory[addr as usize] = value,
+        };
+        self.memory[addr as usize] = value;
+    }
+
+    fn mem_read(&mut self, addr: u16) -> u8 {
+        match addr {
+            Self::DEV_CHAR => {
+                self.read_key() as _
+            },
+            _ => self.memory[addr as usize],
         }
     }
 
@@ -86,7 +126,7 @@ impl Core {
         let r_b = instr & 0x3;
         let addr = if opcode >= OP_JUMP { self.next_short() } else { 0 };
 
-        println!("OP={} A={} B={}", opcode, r_a, r_b);
+        println!("OP={} A={} B={}\r", opcode, r_a, r_b);
 
         match opcode {
             OP_HALT => self.is_halted = true, //HALT
@@ -134,12 +174,12 @@ impl Core {
                 self.regs.ip = addr;
             },
             OP_LOAD => {
-                let value = self.memory[addr as usize];
+                let value = self.mem_read(addr);
                 self.regs.set(r_a, value);
             },
             OP_STOR => {
                 let value = self.regs.get(r_a);
-                self.memory[addr as usize] = value;
+                self.mem_write(addr, value);
             },
             OP_BREQ => {
                 let val_a = self.regs.get(r_a);
@@ -155,10 +195,10 @@ impl Core {
                     self.regs.ip = addr;
                 }
             },
-            opcode => panic!("Unknown opcode {}", opcode),
+            opcode => panic!("Unknown opcode {}\r", opcode),
         }
 
-        println!("REGS: {:x?}", self.regs);
+        println!("REGS: {:x?}\r", self.regs);
     }
     
     fn next_byte(&mut self) -> u8 {
@@ -176,7 +216,7 @@ impl Core {
 
 fn main() {
 
-    let mut core = Core::new();
+    let mut core = Core::new(stdin().keys());
     {
         use std::env;
         use std::fs::File;
@@ -191,6 +231,11 @@ fn main() {
 
         core.load(&buffer);
     }
+
+    let mut _stdout = stdout().into_raw_mode().unwrap();
+
+    print!("\r\n");
+    stdout().flush().unwrap();
 
     while !core.is_halted {
         core.step();
