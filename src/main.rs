@@ -69,7 +69,7 @@ struct Core {
 }
 
 impl Core {
-    const MEM_SIZE: usize = 0x10000;
+    const MEM_SIZE: usize = u16::MAX as _;
     const DEV_CHAR: u16 = 0xFFFF;
 
     pub fn new(keys: Keys<Stdin>) -> Self {
