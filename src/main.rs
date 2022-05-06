@@ -85,6 +85,9 @@ impl Core {
         let key = self.keys.next().unwrap_or(Ok(Key::Null)).unwrap();
         let key = match key {
             Key::Char(c) => c,
+            Key::Ctrl('c') => {
+                panic!("\r\nCtrl+C Pressed");
+            },
             Key::Backspace => '\x08',
             Key::Esc => '\x1B',
             _ => '\x00',
