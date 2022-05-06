@@ -105,7 +105,6 @@ impl Core {
             },
             _ => self.memory[addr as usize] = value,
         };
-        self.memory[addr as usize] = value;
     }
 
     fn mem_read(&mut self, addr: u16) -> u8 {
