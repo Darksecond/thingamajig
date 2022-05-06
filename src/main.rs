@@ -128,7 +128,7 @@ impl Core {
         let r_b = instr & 0x3;
         let addr = if opcode >= OP_JUMP { self.next_short() } else { 0 };
 
-        // println!("OP={} A={} B={}\r", opcode, r_a, r_b);
+        eprintln!("OP={} A={} B={}\r", opcode, r_a, r_b);
 
         match opcode {
             OP_HALT => self.is_halted = true, //HALT
@@ -200,7 +200,7 @@ impl Core {
             opcode => panic!("Unknown opcode {}\r", opcode),
         }
 
-        //println!("REGS: {:x?}\r", self.regs);
+        eprintln!("REGS: {:x?}\r", self.regs);
     }
     
     fn next_byte(&mut self) -> u8 {
