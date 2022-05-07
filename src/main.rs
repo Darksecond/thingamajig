@@ -7,7 +7,7 @@ const OP_SHL : u8 = 0x2;
 const OP_SHR : u8 = 0x3;
 const OP_ROL : u8 = 0x4;
 const OP_ROR : u8 = 0x5;
-const OP_NOT : u8 = 0x6;
+const OP_NAND : u8 = 0x6;
 const OP_AND : u8 = 0x7;
 const OP_OR  : u8 = 0x8;
 const OP_XOR : u8 = 0x9;
@@ -150,9 +150,10 @@ impl Core {
                 let value = self.regs.get(r_a);
                 self.regs.set(r_a, value.rotate_right(1));
             },
-            OP_NOT => {
-                let value = self.regs.get(r_a);
-                self.regs.set(r_a, !value);
+            OP_NAND => {
+                let val_a = self.regs.get(r_a);
+                let val_b = self.regs.get(r_b);
+                self.regs.set(r_a, !(val_a & val_b));
             },
             OP_AND => {
                 let val_a = self.regs.get(r_a);
