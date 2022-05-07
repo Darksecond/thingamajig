@@ -11,12 +11,13 @@ const OP_NOT : u8 = 0x6;
 const OP_AND : u8 = 0x7;
 const OP_OR  : u8 = 0x8;
 const OP_XOR : u8 = 0x9;
-const OP_JUMP: u8 = 0xA;
-const OP_CALL: u8 = 0xB;
-const OP_LOAD: u8 = 0xC;
-const OP_STOR: u8 = 0xD;
-const OP_BREQ: u8 = 0xE;
-const OP_BRNE: u8 = 0xF;
+
+const OP_LOAD: u8 = 0xA;
+const OP_STOR: u8 = 0xB;
+const OP_BREQ: u8 = 0xC;
+const OP_BRNE: u8 = 0xD;
+const OP_CREQ: u8 = 0xE;
+const OP_CRNE: u8 = 0xF;
 
 #[derive(Debug)]
 struct Registers {
@@ -126,9 +127,9 @@ impl Core {
 
         let r_a = (instr >> 2) & 0x3;
         let r_b = instr & 0x3;
-        let addr = if opcode >= OP_JUMP { self.next_short() } else { 0 };
+        let addr = if opcode > OP_XOR { self.next_short() } else { 0 };
 
-        eprintln!("OP={} A={} B={}\r", opcode, r_a, r_b);
+        eprintln!("OP={} A={} B={} ADDR={}\r", opcode, r_a, r_b, addr);
 
         match opcode {
             OP_HALT => self.is_halted = true, //HALT
@@ -168,13 +169,6 @@ impl Core {
                 let val_b = self.regs.get(r_b);
                 self.regs.set(r_a, val_a ^ val_b);
             },
-            OP_JUMP => {
-                self.regs.ip = addr;
-            },
-            OP_CALL => {
-                self.regs.rp = self.regs.ip;
-                self.regs.ip = addr;
-            },
             OP_LOAD => {
                 let value = self.mem_read(addr);
                 self.regs.set(r_a, value);
@@ -182,6 +176,22 @@ impl Core {
             OP_STOR => {
                 let value = self.regs.get(r_a);
                 self.mem_write(addr, value);
+            },
+            OP_CREQ => {
+                let val_a = self.regs.get(r_a);
+                let val_b = self.regs.get(r_b);
+                if val_a == val_b {
+                    self.regs.rp = self.regs.ip;
+                    self.regs.ip = addr;
+                }
+            },
+            OP_CRNE => {
+                let val_a = self.regs.get(r_a);
+                let val_b = self.regs.get(r_b);
+                if val_a != val_b {
+                    self.regs.rp = self.regs.ip;
+                    self.regs.ip = addr;
+                }
             },
             OP_BREQ => {
                 let val_a = self.regs.get(r_a);
@@ -197,7 +207,7 @@ impl Core {
                     self.regs.ip = addr;
                 }
             },
-            opcode => panic!("Unknown opcode {}\r", opcode),
+            _ => unreachable!(),
         }
 
         eprintln!("REGS: {:x?}\r", self.regs);
